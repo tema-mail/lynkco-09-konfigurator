@@ -47,6 +47,7 @@ def vname(cn, slug):
     if '碳纤维尾翼' in cn: tag.append('карбоновый спойлер')
     lat = ' '.join(re.findall(r'[A-Za-z0-9.+]+', re.sub(r'^\d{3}', '', cn)))
     if '探索版' in cn: lat = (lat + ' Explorer').strip()
+    if '碳纤维尾翼' in cn: lat = (lat + ' Carbon').strip()
     name = (lat + (' ' + num if num else '')).strip() or 'Стандартная'
     return name, ', '.join(tag).capitalize() if tag else ''
 
@@ -157,6 +158,7 @@ def sobrat(proj, car, short, slug):
         for k in sorted(ext_keys, key=lambda x: 0 if x.startswith('pk') else prio[SKU[x][2]]):
             rest = [x for x in ext_keys if x != k]; seen = {}
             if all(seen.setdefault(tuple(r[x] for x in rest), h) == h for r, h in rows): ext_keys = rest
+        if not ext_keys: ext_keys = [keys[0]]                       # у версии одна картинка: код кадра всё равно не пустой
         def code_of(r):
             return pre + '_'.join(c for c in ((('k' + k[2:]) if r[k] else None) if k.startswith('pk') else oid(SKU[k][0], r[k]) for k in ext_keys) if c)
         for r, h in rows:

@@ -17,7 +17,12 @@ async (page) => {
     try { await page.waitForFunction(() => !document.querySelector('.z9__stage').classList.contains('is-loading'), null, { timeout: 10000 }); } catch (e) { out.fails.push(what + ': картинка не загрузилась'); }
     const r = await page.evaluate(() => { const im = document.querySelector('.z9__shot.is-front img'); const src = im.currentSrc.split('/').pop().replace('.webp', '').split('--')[0];
       const code = src.includes('-') ? src.split('-').slice(1).join('-') : src; const sel = window.ZeekrCfg.get().config;
-      return { alien: code.split('_').filter(t => t && sel.indexOf(t) === -1), w: im.naturalWidth }; });
+      // ожидаемый кадр кузова: если точная сборка снята, на экране должна быть именно она (ловит картинку, которая не обновилась)
+      const D = window.ZEEKR_CFG, det = window.ZeekrCfg.get(), V = D.versions.find(v => v.id === det.version);
+      const want = V ? (V.codePrefix || '') + V.vehicleSkus.map(s => sel.find(c => D.options[c] && D.options[c].sku === s)).filter(Boolean).join('_') : null;
+      const isExt = im.currentSrc.indexOf(D.paths.ext.split('{code}')[0]) !== -1 && /--hero\.webp/.test(im.currentSrc);
+      return { alien: code.split('_').filter(t => t && sel.indexOf(t) === -1), w: im.naturalWidth, stale: (isExt && want && D.have[want] && src !== want) ? want + ' вместо него ' + src : '' }; });
+    if (r.stale) out.fails.push(what + ': кадр кузова не тот, ждали ' + r.stale);
     if (r.alien.length) out.fails.push(what + ': на картинке чужие опции ' + r.alien.join(','));
     if (!r.w) out.fails.push(what + ': картинка пустая');
   };
@@ -58,6 +63,7 @@ url = sys.argv[1]; outdir = sys.argv[2] if len(sys.argv) > 2 else None
 r = run(JS.replace('%URL%', json.dumps(url)), 1500)
 name = url.rstrip('/').split('/')[-1]
 if outdir:
+    os.makedirs(outdir, exist_ok=True)
     for k in ('pic_d', 'pic_m'): open(f'{outdir}/{name}-{k[-1]}.jpg', 'wb').write(base64.b64decode(r.pop(k)))
 else: r.pop('pic_d', None); r.pop('pic_m', None)
 ok = not r['errs'] and not r['bad'] and not r['fails'] and not r['images']['bad'] and r['link'] and r['formLocked'] and r['w390'] == 390 and not r['cjk']
